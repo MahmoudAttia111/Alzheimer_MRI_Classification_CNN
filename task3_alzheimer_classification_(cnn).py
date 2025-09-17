@@ -25,12 +25,11 @@ from tensorflow.keras import optimizers
 from tensorflow import keras
 from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.metrics import confusion_matrix,classification_report
+import splitfolders
 
 """### write any name or any passoward >>name: hfdd, password 343433"""
 
 od.download("https://www.kaggle.com/datasets/uraninjo/augmented-alzheimer-mri-dataset")
-
-import splitfolders
 
 splitfolders.ratio(
     "/content/augmented-alzheimer-mri-dataset/AugmentedAlzheimerDataset",
@@ -49,14 +48,6 @@ val_ds = tf.keras.utils.image_dataset_from_directory(
     image_size=(224,224),
     batch_size=32
 )
-
-# train_ds = tf.keras.utils.image_dataset_from_directory(
-#     "/content/augmented-alzheimer-mri-dataset/AugmentedAlzheimerDataset",
-#  validation_split = 0.2,subset = "training",seed=42,image_size=(224,224),batch_size=32)
-
-# val_ds = tf.keras.utils.image_dataset_from_directory(
-#     "/content/augmented-alzheimer-mri-dataset/AugmentedAlzheimerDataset",
-#  validation_split = 0.2,subset = "validation",seed=42,image_size=(224,224),batch_size=32)
 
 class_names = train_ds.class_names
 print(class_names)
@@ -120,7 +111,6 @@ plt.legend()
 plt.title("Accuracy")
 plt.show()
 
-# عرض منحنى الـ Loss
 plt.plot(history.history['loss'], label='Train Loss')
 plt.plot(history.history['val_loss'], label='Val Loss')
 plt.legend()
@@ -137,105 +127,3 @@ test_loss, test_acc = model.evaluate(test_ds)
 print(f"🎯 Test Accuracy on Original Data: {test_acc*100:.2f}%")
 
 model.save("/content/alzheimer_model.h5")
-
-base_model = tf.keras.applications.ResNet50(
-    include_top=False,
-    weights="imagenet",
-    input_shape=(224,224,3)
-)
-
-base_model.trainable = False
-
-# ✅ بناء الموديل
-model = models.Sequential([
-    layers.Input(shape=(224,224,3)),
-    base_model,
-    layers.GlobalAveragePooling2D(),
-    layers.Dropout(0.4),
-    layers.Dense(128, activation="relu"),
-    layers.Dropout(0.3),
-    layers.Dense(4, activation="softmax")
-])
-
-
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-4),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"]
-)
-
-earlyS = tf.keras.callbacks.EarlyStopping(
-    monitor="val_loss",
-    patience=7,
-    restore_best_weights=True
-)
-
-history1 = model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=10,
-    callbacks=[earlyS]
-)
-
-base_model.trainable = True
-for layer in base_model.layers[:-50]:
-    layer.trainable = False
-
-model.compile(
-    optimizer=keras.optimizers.Adam(learning_rate=1e-5),
-    loss="sparse_categorical_crossentropy",
-    metrics=["accuracy"]
-)
-
-
-history2 = model.fit(
-    train_ds,
-    validation_data=val_ds,
-    epochs=10,
-    callbacks=[earlyS]
-)
-
-def combine_history(h1, h2):
-    history = {}
-    for k in h1.history.keys():
-        history[k] = h1.history[k] + h2.history[k]
-    return history
-full_history = combine_history(history1, history2)
-
-
-plt.figure(figsize=(12,5))
-
-
-plt.subplot(1,2,1)
-plt.plot(full_history['accuracy'], label='Train Acc')
-plt.plot(full_history['val_accuracy'], label='Val Acc')
-plt.title('Training & Validation Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-
-plt.subplot(1,2,2)
-plt.plot(full_history['loss'], label='Train Loss')
-plt.plot(full_history['val_loss'], label='Val Loss')
-plt.title('Training & Validation Loss')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-
-plt.show()
-
-"""to install requirement run this code"""
-
-!pip freeze > requirements.txt
-from google.colab import files
-files.download("requirements.txt")
-
-# Commented out IPython magic to ensure Python compatibility.
-# %%writefile requirements.txt
-# streamlit
-# tensorflow
-# numpy
-# pillow
-# from google.colab import files
-# files.download("requirements.txt")
-#
